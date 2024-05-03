@@ -6,103 +6,67 @@ on:
   pull_request:    
     branches:    
       - main  
+
 env:
   SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }} 
+
 jobs:
   build: 
     name: Build and Test default scheme using any available iPhone simulator
-    runs-on: macos-latest
+    runs-on: macos-12
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: check Xcode version
-        run: /usr/bin/xcodebuild -version
+      - name: Set Up Ruby Environment
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
 
-      - name: Install the Apple certificate and provisioning profile
+      - name: Install Apple Certificate and Provisioning Profile
         env:
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
-          # Copy the certificate and provisioning profile to the correct locations
-          cp Certificates.p12 $RUNNER_TEMP/build_certificate.p12
-          cp DemoTest.mobileprovision $RUNNER_TEMP/build_pp.mobileprovision
-
-          # Import the certificate to the user keychain
-          security import $RUNNER_TEMP/build_certificate.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k ~/Library/Keychains/login.keychain-db
-          security list-keychain -d user -s ~/Library/Keychains/login.keychain-db
-
-          # Apply the provisioning profile
+          security create-keychain -p "" build.keychain
+          security import Certificates.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $RUNNER_TEMP/build_pp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles
+          cp DemoTest.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: check Xcode version
-        run: /usr/bin/xcodebuild -version
-
-      - name: Copy Podfile
-        run: cp -r SignIn/Podfile .
-
-      - name: Install CocoaPods
+      - name: Install CocoaPods Dependencies
         run: |
-          sudo gem install cocoapods -v '1.11.2'
-          pod repo list
-          pod setup
+          sudo gem install cocoapods
+          cd SignIn
+          pod install
 
-      - name: Install dependencies
-        run: pod install --project-directory=SignIn/
+      - name: Navigate to Project Directory
+        run: cd SignIn
 
-      - name: Check current directory
+      - name: Update Provisioning Profile Specifier
         run: |
-          pwd
-          ls -al
-
-      - name: Navigate to SignIn folder
-        run: |
-          cd SignIn/
-          ls
-
-      - name: Update provisioning profile specifier in Xcode project
-        run: |
-          gem install xcodeproj
-          ruby - <<EOF
           require 'xcodeproj'
-
-          # Define the path to your Xcode project
-          project_path = 'SignIn/SignIn.xcodeproj'
-
-          # Define the target name
-          target_name = 'SignIn'
-
-          # Define the provisioning profile specifier
-          provisioning_profile_specifier = "DemoTest"
-
-          # Open the Xcode project
+          project_path = 'SignIn.xcodeproj'
           project = Xcodeproj::Project.open(project_path)
-
-          # Find the target
-          target = project.targets.find { |t| t.name == target_name }
-
-          # Update the provisioning profile settings
-          target.build_configuration_list.build_configurations.each do |configuration|
-            configuration.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = provisioning_profile_specifier
+          project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'DemoTest'
+            end
           end
-
-          # Save the changes to the Xcode project file
           project.save
-          EOF
-          
-      - name: List available simulators
+
+      - name: List Available Simulators
         run: xcrun simctl list devices available     
 
       - name: Build and Archive for Real Device
         run: |
-         xcodebuild archive -workspace SignIn/SignIn.xcworkspace \
+         xcodebuild archive -workspace SignIn.xcworkspace \
          -scheme SignIn -archivePath "$RUNNER_TEMP/SignIn.xcarchive" \
          -sdk iphoneos -configuration Debug \
          clean archive DEVELOPMENT_TEAM="X372X3URRM" \
          PROVISIONING_PROFILE_SPECIFIER="DemoTest" -allowProvisioningUpdates
 
-      - name: List files in $RUNNER_TEMP
+      - name: List Files in Temporary Directory
         run: |
           ls -a "$RUNNER_TEMP"
           ls -a "$RUNNER_TEMP/SignIn.xcarchive"
