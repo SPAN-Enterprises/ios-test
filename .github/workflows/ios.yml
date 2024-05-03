@@ -58,7 +58,11 @@ jobs:
 
 
       - name: List Available Simulators
-        run: xcrun simctl list devices available     
+        run: xcrun simctl list devices available  
+
+      - name: Change to SignIn Directory
+        run: |
+         cd SignIn
 
       - name: Build and Archive for Real Device
         run: |
@@ -67,6 +71,7 @@ jobs:
          -sdk iphoneos -configuration Debug \
          clean archive DEVELOPMENT_TEAM="X372X3URRM" \
          PROVISIONING_PROFILE_SPECIFIER="DemoTest" -allowProvisioningUpdates
+        working-directory: SignIn 
 
       - name: List Files in Temporary Directory
         run: |
