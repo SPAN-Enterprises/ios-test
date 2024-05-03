@@ -45,15 +45,17 @@ jobs:
 
       - name: Update Provisioning Profile Specifier
         run: |
-          require 'xcodeproj'
-          project_path = 'SignIn.xcodeproj'
-          project = Xcodeproj::Project.open(project_path)
-          project.targets.each do |target|
-            target.build_configurations.each do |config|
-              config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'DemoTest'
-            end
-          end
-          project.save
+         ruby -e "require 'xcodeproj'; \
+           project_path = 'SignIn/SignIn.xcodeproj'; \
+           project = Xcodeproj::Project.open(project_path); \
+           project.targets.each do |target| \
+             target.build_configurations.each do |config| \
+               config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'DemoTest'; \
+             end; \
+           end; \
+           project.save"
+        shell: bash
+
 
       - name: List Available Simulators
         run: xcrun simctl list devices available     
