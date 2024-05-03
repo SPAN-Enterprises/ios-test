@@ -95,12 +95,16 @@ jobs:
         id: build_archive
         run: |
           xcodebuild archive -workspace SignIn/SignIn.xcworkspace \
-          -scheme SignIn -archivePath "$RUNNER_TEMP/SignIn.xcarchive" \
-          -sdk iphonesimulator -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro Max,OS=17.0' \
-          clean archive DEVELOPMENT_TEAM="X372X3URRM" \
-          PROVISIONING_PROFILE_SPECIFIER="DemoTest" -allowProvisioningUpdates \
-          | tee build_output.txt
+          -scheme SignIn \
+          -archivePath /Users/runner/work/_temp/SignIn.xcarchive \
+          -sdk iphoneos \
+          -configuration Debug \
+          clean archive \
+          DEVELOPMENT_TEAM=X372X3URRM \
+          PROVISIONING_PROFILE_SPECIFIER=DemoTest \
+          -allowProvisioningUpdates
+
+          
 
       - name: List files in $RUNNER_TEMP
         run: |
