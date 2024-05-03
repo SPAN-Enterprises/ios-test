@@ -90,6 +90,9 @@ jobs:
           # Save the changes to the Xcode project file
           project.save
           EOF
+          
+      - name: List available simulators
+        run: xcrun simctl list devices available     
 
       - name: Build and Archive
         id: build_archive
