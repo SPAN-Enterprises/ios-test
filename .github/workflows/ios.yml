@@ -42,19 +42,35 @@ jobs:
 
       - name: Navigate to Project Directory
         run: cd SignIn
-
-      - name: Update Provisioning Profile Specifier
+      - name: Update provisioning profile specifier in Xcode project
         run: |
-         ruby -e "require 'xcodeproj'; \
-           project_path = 'SignIn/SignIn.xcodeproj'; \
-           project = Xcodeproj::Project.open(project_path); \
-           project.targets.each do |target| \
-             target.build_configurations.each do |config| \
-               config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = 'DemoTest'; \
-             end; \
-           end; \
-           project.save"
-        shell: bash
+          gem install xcodeproj
+          ruby - <<EOF
+          require 'xcodeproj'
+
+          # Define the path to your Xcode project
+          project_path = 'SignIn/SignIn.xcodeproj'
+
+          # Define the target name
+          target_name = 'SignIn'
+
+          # Define the provisioning profile specifier
+          provisioning_profile_specifier = "DemoTest"
+
+          # Open the Xcode project
+          project = Xcodeproj::Project.open(project_path)
+
+          # Find the target
+          target = project.targets.find { |t| t.name == target_name }
+
+          # Update the provisioning profile settings
+          target.build_configuration_list.build_configurations.each do |configuration|
+            configuration.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = provisioning_profile_specifier
+          end
+
+          # Save the changes to the Xcode project file
+          project.save
+          EOF
 
 
       - name: List Available Simulators
